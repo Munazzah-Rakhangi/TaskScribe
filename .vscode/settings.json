@@ -1,0 +1,7 @@
+{
+  "python.defaultInterpreterPath": "/Users/munazzahrakhangi/Desktop/meeting-notes-agent/backend/.venv/bin/python",
+  "python.analysis.extraPaths": [
+    "/Users/munazzahrakhangi/Desktop/meeting-notes-agent/backend/.venv/lib/python3.12/site-packages"
+  ],
+  "python.analysis.diagnosticMode": "workspace"
+}

@@ -1,0 +1,127 @@
+@import "tailwindcss";
+
+/* Theme variables - Tailwind v4 @theme inline needs these in data-theme selectors.
+   Use --theme-* so utilities resolve from the element that has data-theme. */
+:root {
+  --theme-background: #fdf8f5;
+  --theme-foreground: #3d3a36;
+  --theme-pastel-cream: #fdf8f5;
+  --theme-pastel-blush: #fce8e4;
+  --theme-pastel-lavender: #e8e0f2;
+  --theme-pastel-sage: #dce8e0;
+  --theme-pastel-mint: #d6f0e6;
+  --theme-pastel-peach: #f5e4dc;
+  --theme-pastel-sky: #dce8f2;
+  --theme-pastel-accent: #a898c4;
+  --theme-pastel-accent-hover: #8f7bb0;
+  --theme-pastel-text: #4a4642;
+  --theme-pastel-text-muted: #7a7570;
+  --theme-pastel-border: #e8e2dc;
+  --theme-pastel-card: #ffffff;
+}
+
+/* System preference - dark when no explicit theme */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --theme-background: #1a1816;
+    --theme-foreground: #e8e4e0;
+    --theme-pastel-cream: #252220;
+    --theme-pastel-blush: #2e2422;
+    --theme-pastel-lavender: #2a2532;
+    --theme-pastel-sage: #242a26;
+    --theme-pastel-mint: #222c26;
+    --theme-pastel-peach: #2c2622;
+    --theme-pastel-sky: #242a32;
+    --theme-pastel-accent: #b8a8d4;
+    --theme-pastel-accent-hover: #c9bce0;
+    --theme-pastel-text: #e0dcd8;
+    --theme-pastel-text-muted: #a09a94;
+    --theme-pastel-border: #3a3632;
+    --theme-pastel-card: #2a2624;
+  }
+}
+
+/* Explicit dark theme (toggle) */
+[data-theme="dark"] {
+  --theme-background: #1a1816;
+  --theme-foreground: #e8e4e0;
+  --theme-pastel-cream: #252220;
+  --theme-pastel-blush: #2e2422;
+  --theme-pastel-lavender: #2a2532;
+  --theme-pastel-sage: #242a26;
+  --theme-pastel-mint: #222c26;
+  --theme-pastel-peach: #2c2622;
+  --theme-pastel-sky: #242a32;
+  --theme-pastel-accent: #b8a8d4;
+  --theme-pastel-accent-hover: #c9bce0;
+  --theme-pastel-text: #e0dcd8;
+  --theme-pastel-text-muted: #a09a94;
+  --theme-pastel-border: #3a3632;
+  --theme-pastel-card: #2a2624;
+}
+
+/* Explicit light theme (toggle) */
+[data-theme="light"] {
+  --theme-background: #fdf8f5;
+  --theme-foreground: #3d3a36;
+  --theme-pastel-cream: #fdf8f5;
+  --theme-pastel-blush: #fce8e4;
+  --theme-pastel-lavender: #e8e0f2;
+  --theme-pastel-sage: #dce8e0;
+  --theme-pastel-mint: #d6f0e6;
+  --theme-pastel-peach: #f5e4dc;
+  --theme-pastel-sky: #dce8f2;
+  --theme-pastel-accent: #a898c4;
+  --theme-pastel-accent-hover: #8f7bb0;
+  --theme-pastel-text: #4a4642;
+  --theme-pastel-text-muted: #7a7570;
+  --theme-pastel-border: #e8e2dc;
+  --theme-pastel-card: #ffffff;
+}
+
+@theme inline {
+  --color-background: var(--theme-background);
+  --color-foreground: var(--theme-foreground);
+  --color-pastel-cream: var(--theme-pastel-cream);
+  --color-pastel-blush: var(--theme-pastel-blush);
+  --color-pastel-lavender: var(--theme-pastel-lavender);
+  --color-pastel-sage: var(--theme-pastel-sage);
+  --color-pastel-mint: var(--theme-pastel-mint);
+  --color-pastel-peach: var(--theme-pastel-peach);
+  --color-pastel-sky: var(--theme-pastel-sky);
+  --color-pastel-accent: var(--theme-pastel-accent);
+  --color-pastel-accent-hover: var(--theme-pastel-accent-hover);
+  --color-pastel-text: var(--theme-pastel-text);
+  --color-pastel-text-muted: var(--theme-pastel-text-muted);
+  --color-pastel-border: var(--theme-pastel-border);
+  --color-pastel-card: var(--theme-pastel-card);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--theme-background);
+  color: var(--theme-foreground);
+  font-family: var(--font-sans);
+}
+
+
+/* Visual polish: transitions and focus styles */
+* {
+  scroll-behavior: smooth;
+}
+
+button, a, input, textarea, [role="button"] {
+  transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--theme-pastel-accent);
+  outline-offset: 2px;
+}

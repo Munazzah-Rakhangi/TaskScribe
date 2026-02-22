@@ -1,0 +1,24 @@
+cat > .gitignore << 'EOF'
+# OS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+env/
+*.env
+
+# Node
+node_modules/
+.next/
+out/
+
+# Logs
+*.log
+
+# DB / Docker volumes
+*.sqlite3
+*.db
+app.db
+EOF

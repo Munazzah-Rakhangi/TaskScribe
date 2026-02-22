@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16
+    container_name: meeting_notes_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: meeting_notes
+      POSTGRES_USER: meeting_user
+      POSTGRES_PASSWORD: meeting_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - meeting_notes_pgdata:/var/lib/postgresql/data
+
+volumes:
+  meeting_notes_pgdata:
