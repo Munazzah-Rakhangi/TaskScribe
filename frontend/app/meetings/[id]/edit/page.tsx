@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import RequireAuth from "../../../components/RequireAuth";
+import { FOLDER_COLORS } from "../../../data/folderColors";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
 
@@ -11,6 +12,7 @@ type ActionItem = {
   task: string;
   owner?: string | null;
   deadline?: string | null;
+  completed?: boolean;
 };
 
 type Meeting = {
@@ -18,7 +20,8 @@ type Meeting = {
   title: string;
   transcript: string;
   summary?: string | null;
-  action_items: { id: number; task: string; owner?: string | null; deadline?: string | null }[];
+  folder_id?: number | null;
+  action_items: { id: number; task: string; owner?: string | null; deadline?: string | null; completed_at?: string | null }[];
 };
 
 function EditMeetingForm() {
@@ -29,18 +32,20 @@ function EditMeetingForm() {
   const { success, error: showError } = useToast();
 
   const API_URL =
-    process.env.NEXT_PUBLIC_API_URL?.trim() || "http://127.0.0.1:8002";
+    process.env.NEXT_PUBLIC_API_URL?.trim() || "http://127.0.0.1:8003";
 
   const [title, setTitle] = useState("");
   const [transcript, setTranscript] = useState("");
   const [summary, setSummary] = useState("");
   const [actionItems, setActionItems] = useState<ActionItem[]>([
-    { task: "", owner: "", deadline: "" },
+    { task: "", owner: "", deadline: "", completed: false },
   ]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [folderId, setFolderId] = useState<number | null>(null);
+  const [folders, setFolders] = useState<{ id: number; name: string; color: string }[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -59,14 +64,16 @@ function EditMeetingForm() {
         setTitle(m.title);
         setTranscript(m.transcript);
         setSummary(m.summary ?? "");
+        setFolderId(m.folder_id ?? null);
 
         const mapped = (m.action_items || []).map((a) => ({
           task: a.task,
           owner: a.owner ?? "",
           deadline: a.deadline ?? "",
+          completed: !!a.completed_at,
         }));
 
-        setActionItems(mapped.length ? mapped : [{ task: "", owner: "", deadline: "" }]);
+        setActionItems(mapped.length ? mapped : [{ task: "", owner: "", deadline: "", completed: false }]);
       } catch (e: any) {
         setError(e.message || "Something went wrong");
       } finally {
@@ -75,9 +82,24 @@ function EditMeetingForm() {
     }
 
     load();
-  }, [id, API_URL]);
+  }, [id, fetchWithAuth]);
 
-  function updateItem(index: number, field: keyof ActionItem, value: string) {
+  useEffect(() => {
+    async function loadFolders() {
+      try {
+        const res = await fetchWithAuth(`${API_URL}/folders`, { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          setFolders(Array.isArray(data) ? data : []);
+        }
+      } catch {
+        // ignore
+      }
+    }
+    loadFolders();
+  }, [fetchWithAuth]);
+
+  function updateItem(index: number, field: keyof ActionItem, value: string | boolean) {
     setActionItems((prev) => {
       const next = [...prev];
       next[index] = { ...next[index], [field]: value };
@@ -86,7 +108,7 @@ function EditMeetingForm() {
   }
 
   function addItem() {
-    setActionItems((prev) => [...prev, { task: "", owner: "", deadline: "" }]);
+    setActionItems((prev) => [...prev, { task: "", owner: "", deadline: "", completed: false }]);
   }
 
   function removeItem(index: number) {
@@ -106,6 +128,7 @@ function EditMeetingForm() {
           task: x.task.trim(),
           owner: x.owner?.toString().trim() || null,
           deadline: x.deadline?.toString().trim() || null,
+          completed: x.completed ?? false,
         }))
         .filter((x) => x.task.length > 0);
 
@@ -116,6 +139,7 @@ function EditMeetingForm() {
           title,
           transcript,
           summary: summary.trim() || null,
+          folder_id: folderId,
           action_items: cleaned,
         }),
       });
@@ -153,7 +177,7 @@ function EditMeetingForm() {
     <main className="min-h-screen bg-pastel-cream">
       <div className="max-w-3xl mx-auto p-6 space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
-          <Link href={`/meetings/${id}`} className="border-2 border-pastel-border rounded-xl px-4 py-2 text-pastel-text hover:bg-pastel-lavender/40 transition-colors">
+          <Link href={`/meetings/${id}`} className="border border-pastel-border rounded-lg px-4 py-2 text-pastel-text hover:bg-pastel-cream transition-colors">
             ← Back
           </Link>
           <h1 className="text-2xl font-bold text-pastel-text">Edit Meeting</h1>
@@ -161,16 +185,68 @@ function EditMeetingForm() {
         </div>
 
         {error && (
-          <div className="bg-pastel-blush border border-pastel-border rounded-2xl p-4 text-red-600">
+          <div className="bg-pastel-blush/50 border border-pastel-border rounded-xl p-4 text-red-700 dark:text-red-400">
             Error: {error}
           </div>
         )}
 
-        <form onSubmit={handleSave} className="bg-pastel-card border-2 border-pastel-border rounded-2xl p-6 shadow-sm space-y-6">
+        <form onSubmit={handleSave} className="bg-pastel-card border border-pastel-border rounded-xl p-6 shadow-sm space-y-6">
+          <div className="space-y-2">
+            <label className="font-medium text-pastel-text">Folder</label>
+            <select
+              value={folderId ?? ""}
+              onChange={(e) => setFolderId(e.target.value ? parseInt(e.target.value, 10) : null)}
+              className="w-full border border-pastel-border p-3 rounded-lg focus:border-pastel-accent focus:ring-2 focus:ring-pastel-accent/20 focus:outline-none bg-pastel-cream text-pastel-text"
+            >
+              <option value="">No folder</option>
+              {folders.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
+            {folderId != null && (
+              <div className="mt-2 pt-2 border-t border-pastel-border">
+                <p className="text-sm text-pastel-text-muted mb-2">Change folder color</p>
+                <div className="flex flex-wrap gap-2">
+                  {FOLDER_COLORS.map((c) => {
+                    const folder = folders.find((x) => x.id === folderId);
+                    const isSelected = folder ? folder.color === c.value : false;
+                    return (
+                      <button
+                        key={c.value}
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const res = await fetchWithAuth(`${API_URL}/folders/${folderId}`, {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ color: c.value }),
+                            });
+                            const data = await res.json();
+                            if (res.ok) {
+                              setFolders((prev) => prev.map((x) => (x.id === folderId ? data : x)));
+                            }
+                          } catch {
+                            // ignore
+                          }
+                        }}
+                        className={`w-8 h-8 rounded-full border-2 transition-transform ${
+                          isSelected ? "border-pastel-text scale-110" : "border-transparent hover:scale-105"
+                        }`}
+                        style={{ backgroundColor: c.value }}
+                        title={c.label}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
           <div className="space-y-2">
             <label className="font-medium text-pastel-text">Title</label>
             <input
-              className="w-full border-2 border-pastel-border p-3 rounded-xl focus:border-pastel-accent focus:outline-none bg-pastel-cream"
+              className="w-full border border-pastel-border p-3 rounded-lg focus:border-pastel-accent focus:ring-2 focus:ring-pastel-accent/20 focus:outline-none bg-pastel-cream"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
@@ -180,7 +256,7 @@ function EditMeetingForm() {
           <div className="space-y-2">
             <label className="font-medium text-pastel-text">Conversation transcript</label>
             <textarea
-              className="w-full border-2 border-pastel-border p-3 rounded-xl focus:border-pastel-accent focus:outline-none bg-pastel-cream resize-y"
+              className="w-full border border-pastel-border p-3 rounded-lg focus:border-pastel-accent focus:ring-2 focus:ring-pastel-accent/20 focus:outline-none bg-pastel-cream resize-y"
               rows={7}
               value={transcript}
               onChange={(e) => setTranscript(e.target.value)}
@@ -191,7 +267,7 @@ function EditMeetingForm() {
           <div className="space-y-2">
             <label className="font-medium text-pastel-text">Meeting notes (summary)</label>
             <textarea
-              className="w-full border-2 border-pastel-border p-3 rounded-xl focus:border-pastel-accent focus:outline-none bg-pastel-cream resize-y"
+              className="w-full border border-pastel-border p-3 rounded-lg focus:border-pastel-accent focus:ring-2 focus:ring-pastel-accent/20 focus:outline-none bg-pastel-cream resize-y"
               rows={5}
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
@@ -202,31 +278,39 @@ function EditMeetingForm() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-pastel-text">Action Items</h2>
-              <button type="button" onClick={addItem} className="px-4 py-2 rounded-xl border-2 border-pastel-border hover:bg-pastel-sage/50 text-pastel-text transition-colors">
+              <button type="button" onClick={addItem} className="px-4 py-2 rounded-lg border border-pastel-border hover:bg-pastel-cream text-pastel-text transition-colors">
                 + Add
               </button>
             </div>
 
             <div className="space-y-3">
               {actionItems.map((item, idx) => (
-                <div key={idx} className="border-2 border-pastel-border rounded-xl p-3 bg-pastel-cream">
+                <div key={idx} className="border border-pastel-border rounded-lg p-3 bg-pastel-cream">
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                    <button
+                      type="button"
+                      onClick={() => updateItem(idx, "completed", !item.completed)}
+                      className="shrink-0 w-8 h-8 rounded border border-pastel-border flex items-center justify-center hover:bg-pastel-cream transition-colors"
+                      title={item.completed ? "Mark as not done" : "Mark as done"}
+                    >
+                      {item.completed ? <span className="text-pastel-accent">✓</span> : null}
+                    </button>
                     <input
-                      className="border-2 border-pastel-border p-2 rounded-lg focus:border-pastel-accent focus:outline-none bg-pastel-card md:col-span-6"
+                      className={`border border-pastel-border p-2 rounded-lg focus:border-pastel-accent focus:ring-2 focus:ring-pastel-accent/20 focus:outline-none bg-pastel-card md:col-span-5 ${item.completed ? "line-through opacity-70" : ""}`}
                       placeholder="Task (required)"
                       value={item.task}
                       onChange={(e) => updateItem(idx, "task", e.target.value)}
                     />
 
                     <input
-                      className="border-2 border-pastel-border p-2 rounded-lg focus:border-pastel-accent focus:outline-none bg-pastel-card md:col-span-3"
+                      className="border border-pastel-border p-2 rounded-lg focus:border-pastel-accent focus:ring-2 focus:ring-pastel-accent/20 focus:outline-none bg-pastel-card md:col-span-3"
                       placeholder="Owner"
                       value={item.owner || ""}
                       onChange={(e) => updateItem(idx, "owner", e.target.value)}
                     />
 
                     <input
-                      className="border-2 border-pastel-border p-2 rounded-lg focus:border-pastel-accent focus:outline-none bg-pastel-card md:col-span-2"
+                      className="border border-pastel-border p-2 rounded-lg focus:border-pastel-accent focus:ring-2 focus:ring-pastel-accent/20 focus:outline-none bg-pastel-card md:col-span-2"
                       placeholder="Deadline"
                       value={item.deadline || ""}
                       onChange={(e) => updateItem(idx, "deadline", e.target.value)}
@@ -235,7 +319,7 @@ function EditMeetingForm() {
                     <button
                       type="button"
                       onClick={() => removeItem(idx)}
-                      className="md:col-span-1 border-2 border-pastel-border rounded-lg h-10 w-10 flex items-center justify-center hover:bg-pastel-blush/50 text-pastel-text-muted transition-colors"
+                      className="md:col-span-1 border border-pastel-border rounded-lg h-10 w-10 flex items-center justify-center hover:bg-pastel-cream text-pastel-text-muted transition-colors"
                       title="Remove"
                     >
                       ✕

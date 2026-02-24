@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL?.trim() || "http://127.0.0.1:8002";
+const API_URL = process.env.NEXT_PUBLIC_API_URL?.trim() || "http://127.0.0.1:8003";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -46,7 +46,7 @@ export default function ResetPasswordPage() {
     return (
       <main className="min-h-screen bg-pastel-cream flex items-center justify-center p-6">
         <div className="w-full max-w-md">
-          <div className="bg-pastel-card border-2 border-pastel-border rounded-2xl p-6 shadow-md text-center">
+          <div className="bg-pastel-card border border-pastel-border rounded-xl p-6 shadow-md text-center">
             <h1 className="text-xl font-bold text-pastel-text mb-2">Invalid link</h1>
             <p className="text-pastel-text-muted mb-4">
               This reset link is invalid or has expired. Please request a new one.
@@ -67,7 +67,7 @@ export default function ResetPasswordPage() {
     return (
       <main className="min-h-screen bg-pastel-cream flex items-center justify-center p-6">
         <div className="w-full max-w-md">
-          <div className="bg-pastel-mint/50 border-2 border-pastel-sage rounded-2xl p-6 shadow-md text-center">
+          <div className="bg-pastel-mint/30 border border-pastel-border rounded-xl p-6 shadow-sm text-center">
             <h1 className="text-xl font-bold text-pastel-text mb-2">Password reset</h1>
             <p className="text-pastel-text-muted">Redirecting you to sign in...</p>
           </div>
@@ -84,7 +84,7 @@ export default function ResetPasswordPage() {
         </h1>
         <form
           onSubmit={handleSubmit}
-          className="bg-pastel-card border-2 border-pastel-border rounded-2xl p-6 shadow-md space-y-4"
+          className="bg-pastel-card border border-pastel-border rounded-xl p-6 shadow-sm space-y-4"
         >
           {error && (
             <div className="bg-pastel-blush border border-pastel-border rounded-xl p-3 text-red-600 text-sm">
@@ -96,7 +96,7 @@ export default function ResetPasswordPage() {
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
-                className="w-full border-2 border-pastel-border p-3 pr-12 rounded-xl focus:border-pastel-accent focus:outline-none bg-pastel-cream text-pastel-text"
+                className="w-full border border-pastel-border p-3 pr-12 rounded-lg focus:border-pastel-accent focus:ring-2 focus:ring-pastel-accent/20 focus:outline-none bg-pastel-cream text-pastel-text"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required

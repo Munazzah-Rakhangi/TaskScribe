@@ -23,20 +23,20 @@ export function HeaderUser() {
       <span className="hidden sm:inline text-pastel-border">|</span>
       <Link
         href="/meetings"
-        className="text-sm text-pastel-text-muted hover:text-pastel-accent transition-colors py-2 px-1 -m-1 rounded-lg hover:bg-pastel-lavender/20 shrink-0"
+        className="text-sm text-pastel-text-muted hover:text-pastel-accent transition-colors py-2 px-1 -m-1 rounded-lg hover:bg-pastel-accent/10 shrink-0"
       >
         View Meetings
       </Link>
       <Link
         href="/create"
-        className="text-sm text-pastel-text-muted hover:text-pastel-accent transition-colors py-2 px-1 -m-1 rounded-lg hover:bg-pastel-lavender/20 hidden sm:inline shrink-0"
+        className="text-sm text-pastel-text-muted hover:text-pastel-accent transition-colors py-2 px-1 -m-1 rounded-lg hover:bg-pastel-accent/10 hidden sm:inline shrink-0"
       >
         + New
       </Link>
       <button
         type="button"
         onClick={logout}
-        className="text-sm text-pastel-text-muted hover:text-pastel-accent transition-colors bg-transparent border-none cursor-pointer py-2 px-1 -m-1 rounded-lg hover:bg-pastel-lavender/20 shrink-0"
+        className="text-sm text-pastel-text-muted hover:text-pastel-accent transition-colors bg-transparent border-none cursor-pointer py-2 px-1 -m-1 rounded-lg hover:bg-pastel-accent/10 shrink-0"
       >
         Log out
       </button>

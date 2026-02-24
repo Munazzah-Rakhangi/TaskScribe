@@ -7,12 +7,14 @@ class ActionItemCreate(BaseModel):
     task: str
     owner: Optional[str] = None
     deadline: Optional[str] = None
+    completed: Optional[bool] = False
 
 
 class MeetingCreate(BaseModel):
     title: str
     transcript: str
     summary: Optional[str] = None
+    folder_id: Optional[int] = None
     action_items: List[ActionItemCreate] = Field(default_factory=list)
 
 
@@ -25,6 +27,7 @@ class ActionItemOut(BaseModel):
     task: str
     owner: str | None = None
     deadline: str | None = None
+    completed_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -35,8 +38,28 @@ class MeetingOut(BaseModel):
     title: str
     transcript: str
     summary: str | None = None
-    created_at: datetime | None = None  # None for legacy records before fix
+    folder_id: int | None = None
+    created_at: datetime | None = None
     action_items: List[ActionItemOut] = Field(default_factory=list)
+
+    class Config:
+        from_attributes = True
+
+
+class FolderCreate(BaseModel):
+    name: str
+    color: str = "#6366f1"
+
+
+class FolderUpdate(BaseModel):
+    name: Optional[str] = None
+    color: Optional[str] = None
+
+
+class FolderOut(BaseModel):
+    id: int
+    name: str
+    color: str
 
     class Config:
         from_attributes = True
@@ -61,6 +84,8 @@ class ExtractActionItemsResponse(BaseModel):
 class UserCreate(BaseModel):
     email: str
     password: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
 
 
 class UserLogin(BaseModel):
@@ -76,7 +101,10 @@ class Token(BaseModel):
 class UserOut(BaseModel):
     id: int
     email: str
+    first_name: str | None = None
+    last_name: str | None = None
     created_at: datetime | None = None
+    has_password: bool = True
 
     class Config:
         from_attributes = True
@@ -94,6 +122,20 @@ class ResetPasswordRequest(BaseModel):
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
+
+
+class UserProfileUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+
+
+class SetPasswordRequest(BaseModel):
+    new_password: str
+
+
+class ActionItemCompleteRequest(BaseModel):
+    completed: bool
 
 
 class ReminderItem(BaseModel):

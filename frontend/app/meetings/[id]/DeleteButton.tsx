@@ -23,7 +23,7 @@ export default function DeleteButton({
       setLoading(true);
 
       const API_URL =
-        process.env.NEXT_PUBLIC_API_URL?.trim() || "http://127.0.0.1:8002";
+        process.env.NEXT_PUBLIC_API_URL?.trim() || "http://127.0.0.1:8003";
 
       const res = await fetchWithAuth(`${API_URL}/meetings/${id}`, {
         method: "DELETE",
@@ -49,7 +49,7 @@ export default function DeleteButton({
     <button
       onClick={handleDelete}
       disabled={loading}
-      className="border-2 border-pastel-border rounded-xl px-4 py-2 hover:bg-pastel-blush/50 text-pastel-text-muted disabled:opacity-50 transition-colors"
+      className="border border-pastel-border rounded-lg px-4 py-2 hover:bg-pastel-cream text-pastel-text-muted disabled:opacity-50 transition-colors"
       title="Delete meeting"
     >
       {loading ? "Deleting..." : "Delete"}

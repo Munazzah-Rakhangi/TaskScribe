@@ -50,10 +50,14 @@ def run_deadline_reminders() -> int:
         sent = 0
         frontend_url = settings.FRONTEND_URL.rstrip("/")
 
-        # Get all action items with deadlines that haven't been reminded yet
+        # Get all action items with deadlines that haven't been reminded yet and aren't completed
         items = (
             db.query(ActionItem)
-            .filter(ActionItem.deadline.isnot(None), ActionItem.reminder_sent_at.is_(None))
+            .filter(
+                ActionItem.deadline.isnot(None),
+                ActionItem.reminder_sent_at.is_(None),
+                ActionItem.completed_at.is_(None),
+            )
             .all()
         )
 

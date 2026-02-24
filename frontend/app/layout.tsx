@@ -3,7 +3,7 @@ import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "./context/AuthContext";
 import { ToastProvider } from "./context/ToastContext";
-import { Sidebar } from "./components/Sidebar";
+import { TopHeader } from "./components/TopHeader";
 
 const plusJakarta = Plus_Jakarta_Sans({
   variable: "--font-sans",
@@ -38,11 +38,11 @@ export default function RootLayout({
       <body className={`${plusJakarta.variable} ${jetbrainsMono.variable} antialiased font-sans`}>
         <AuthProvider>
           <ToastProvider>
-          <div className="flex min-h-screen">
-            <Sidebar />
-            <div className="flex-1 min-w-0">
+          <div className="flex min-h-screen flex-col">
+            <TopHeader />
+            <main className="flex-1 min-h-0 overflow-auto">
               {children}
-            </div>
+            </main>
           </div>
           </ToastProvider>
         </AuthProvider>
