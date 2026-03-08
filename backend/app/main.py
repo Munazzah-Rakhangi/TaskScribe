@@ -29,6 +29,8 @@ from app.schemas import (
     ExtractActionItemsResponse,
     ReminderItem,
     ActionItemCompleteRequest,
+    SemanticSearchRequest,
+    SemanticSearchResult,
 )
 
 # ✅ Load backend/.env into process env
@@ -228,6 +230,11 @@ def create_meeting(
     db.add(meeting)
     db.commit()
     db.refresh(meeting)
+    try:
+        from app.embeddings import upsert_meeting_embedding
+        upsert_meeting_embedding(db, meeting)
+    except Exception:
+        pass
     return meeting
 
 
@@ -244,6 +251,56 @@ def list_meetings(
     elif folder_id is not None:
         q = q.filter(Meeting.folder_id == folder_id)
     return q.order_by(Meeting.id.desc()).all()
+
+
+@app.post("/meetings/backfill-embeddings")
+def backfill_meeting_embeddings(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Generate embeddings for all meetings that don't have one yet (for semantic search)."""
+    from app.embeddings import upsert_meeting_embedding
+
+    meetings = db.query(Meeting).filter(Meeting.user_id == current_user.id).all()
+    count = 0
+    for m in meetings:
+        try:
+            upsert_meeting_embedding(db, m)
+            count += 1
+        except Exception:
+            pass
+    return {"ok": True, "indexed": count, "total": len(meetings)}
+
+
+@app.post("/meetings/semantic-search", response_model=list[SemanticSearchResult])
+def semantic_search_meetings(
+    payload: SemanticSearchRequest = Body(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Find meetings where we discussed the query (RAG over transcripts)."""
+    from app.embeddings import search_meetings
+
+    if not payload.query.strip():
+        return []
+    top_k = max(1, min(50, payload.top_k))
+    scored = search_meetings(db, current_user.id, payload.query.strip(), top_k=top_k)
+    meeting_ids = [m_id for m_id, _ in scored]
+    score_by_id = {m_id: score for m_id, score in scored}
+    if not meeting_ids:
+        return []
+    meetings = (
+        db.query(Meeting)
+        .filter(Meeting.id.in_(meeting_ids), Meeting.user_id == current_user.id)
+        .all()
+    )
+    # Preserve order from scored
+    order = {mid: i for i, mid in enumerate(meeting_ids)}
+    meetings_sorted = sorted(meetings, key=lambda m: order.get(m.id, 999))
+    return [
+        SemanticSearchResult(meeting=m, score=round(score_by_id[m.id], 4))
+        for m in meetings_sorted
+    ]
 
 
 @app.get("/meetings/{meeting_id}", response_model=MeetingOut)
@@ -303,6 +360,11 @@ def update_meeting(
 
     db.commit()
     db.refresh(meeting)
+    try:
+        from app.embeddings import upsert_meeting_embedding
+        upsert_meeting_embedding(db, meeting)
+    except Exception:
+        pass
     return meeting
 
 
@@ -346,6 +408,11 @@ def delete_meeting(
     if not meeting:
         raise HTTPException(status_code=404, detail="Meeting not found")
 
+    try:
+        from app.embeddings import delete_meeting_embedding
+        delete_meeting_embedding(db, meeting_id)
+    except Exception:
+        pass
     db.query(ActionItem).filter(ActionItem.meeting_id == meeting_id).delete(
         synchronize_session=False
     )

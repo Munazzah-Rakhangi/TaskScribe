@@ -26,6 +26,7 @@ How TaskScribe fits into your daily life:
 - **User accounts** — Sign up, login, JWT auth, password reset via email, **Sign in / Sign up with Google**
 - **Organize with folders** — Create folders (name + color) via an "Add folder" modal; click folder chips to filter, use the pencil icon to edit name/color. Assign folders when creating or editing meetings.
 - **Meeting templates** — Predefined templates (1:1, standup, retro, interview, etc.) to quickly prefill title and action-item structure
+- **Semantic search (RAG)** — "Find meetings where we discussed X" over all your transcripts using AI embeddings
 - **Meetings management** — Create, edit, delete meetings; search and filter by title, summary, or action items
 - **Upcoming deadlines** — View action items with deadlines; email reminders sent automatically for upcoming due dates
 - **Mark as done** — Track completion of action items; done items show with strikethrough and are excluded from reminders
@@ -48,6 +49,7 @@ How TaskScribe fits into your daily life:
 TaskScribe uses **agentic AI** to automate meeting workflows:
 
 - **Automated extraction pipeline** — Raw transcript → structured JSON (summary + action items) via OpenAI. The model follows strict output schemas and extracts tasks, owners, and deadlines when mentioned.
+- **Semantic search (RAG)** — Each meeting is embedded with OpenAI `text-embedding-3-small`; search by meaning (e.g. "payment integration", "launch timeline") returns the most relevant meetings with a relevance score.
 - **Deadline reminder agent** — A background agent runs every 24 hours: parses action-item deadlines, identifies items due within 2 days, and sends email reminders to meeting owners. Runs independently without user action.
 - **Voice transcription** — Upload audio or record live; faster-whisper (open-source) transcribes to text. No per-use cost.
 - **Extensible for RAG / advanced agents** — The architecture supports adding semantic search (RAG), meeting Q&A, or a multi-tool meeting assistant agent in the future.
@@ -66,6 +68,7 @@ meeting-notes-agent/
 │   │   ├── main.py          # FastAPI app, routes, /transcribe (faster-whisper), reminder job
 │   │   ├── models.py        # User, Meeting, ActionItem
 │   │   ├── reminders.py     # Deadline reminder background job
+│   │   ├── embeddings.py    # Semantic search (RAG) with OpenAI embeddings
 │   │   ├── routers/auth.py  # Auth endpoints
 │   │   ├── routers/folders.py  # Folder CRUD
 │   │   └── schemas.py       # Pydantic models
@@ -185,6 +188,8 @@ Frontend: **http://localhost:3000**
 | POST | `/folders` | Create folder (protected) |
 | GET/PATCH/DELETE | `/folders/{id}` | Get, update, delete folder (protected) |
 | GET/POST/PUT/DELETE | `/meetings` | CRUD meetings (protected); GET supports ?folder_id=, ?uncategorized=true |
+| POST | `/meetings/semantic-search` | Semantic search by meaning (body: `{ "query": "...", "top_k": 20 }`) (protected) |
+| POST | `/meetings/backfill-embeddings` | Index all meetings for semantic search (protected) |
 | GET | `/meetings/{id}` | Get meeting (protected) |
 | GET | `/reminders` | List upcoming deadlines (protected) |
 | POST | `/reminders/run` | Manually trigger reminder job (testing) |
@@ -200,6 +205,14 @@ On the Meetings page, folders help you group meetings by team, project, or clien
 - **Assign to meetings** — When creating or editing a meeting, pick a folder from the dropdown. You can change a folder’s color from the meeting edit page as well
 
 The color picker appears only in the add-folder modal and when editing a folder, so the main Meetings page stays uncluttered.
+
+## Semantic search (RAG)
+
+On the Meetings page, **Find meetings where we discussed…** lets you search by meaning, not just keywords:
+
+- **How it works** — Meeting content (title, summary, transcript) is embedded with OpenAI `text-embedding-3-small`. Your search query is embedded the same way; results are ranked by similarity.
+- **Indexing** — New and updated meetings are indexed automatically. For existing meetings, click **Index all meetings** once (or call `POST /meetings/backfill-embeddings`).
+- **Requires** — `OPENAI_API_KEY` in `backend/.env`. If missing, semantic search returns no results; keyword search and the rest of the app still work.
 
 ## Database Migrations
 
@@ -218,7 +231,7 @@ alembic revision -m "description"   # Create new migration
 |----------|----------|---------|-------------|
 | `DATABASE_URL` | Yes | — | e.g. `sqlite:///./app.db` or Postgres URL |
 | `OPENAI_API_KEY` | Yes* | — | For AI extraction (*optional if not using extract) |
-| `JWT_SECRET` | No | change-me-in-production | Change in production |
+| `JWT_SECRET` | No | change-me-in-production | Secret key for signing JWTs (use at least 32 random characters in real deployments) |
 | `FRONTEND_URL` | No | http://localhost:3000 | For reset links, OAuth redirect |
 | `API_BASE_URL` | No | http://127.0.0.1:8003 | Backend URL for OAuth callback |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | No | — | For Sign in with Google |

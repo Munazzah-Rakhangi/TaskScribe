@@ -71,6 +71,10 @@ function MeetingsPageContent() {
   const [editingFolderName, setEditingFolderName] = useState("");
   const [editingFolderColor, setEditingFolderColor] = useState("#6366f1");
   const [showAddFolderModal, setShowAddFolderModal] = useState(false);
+  const [semanticQuery, setSemanticQuery] = useState("");
+  const [semanticResults, setSemanticResults] = useState<{ meeting: Meeting; score: number }[]>([]);
+  const [semanticLoading, setSemanticLoading] = useState(false);
+  const [backfillLoading, setBackfillLoading] = useState(false);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL?.trim() || "http://127.0.0.1:8003";
 
@@ -198,6 +202,58 @@ function MeetingsPageContent() {
     }
   }
 
+  async function backfillEmbeddings() {
+    setBackfillLoading(true);
+    try {
+      const res = await fetchWithAuth(`${API_URL}/meetings/backfill-embeddings`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) alert(`Indexed ${data?.indexed ?? 0} meetings. You can use semantic search now.`);
+      else alert(data?.detail || "Backfill failed");
+    } catch {
+      alert("Backfill failed");
+    } finally {
+      setBackfillLoading(false);
+    }
+  }
+
+  async function runSemanticSearch(e: React.FormEvent) {
+    e.preventDefault();
+    if (!semanticQuery.trim()) return;
+    setSemanticLoading(true);
+    setSemanticResults([]);
+    try {
+      const res = await fetchWithAuth(`${API_URL}/meetings/semantic-search`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: semanticQuery.trim(), top_k: 20 }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.detail || "Search failed");
+      setSemanticResults(Array.isArray(data) ? data : []);
+    } catch {
+      setSemanticResults([]);
+    } finally {
+      setSemanticLoading(false);
+    }
+  }
+
+  async function deleteFolder(folderId: number) {
+    if (!confirm("Delete this folder? Meetings in it will become uncategorized.")) return;
+    try {
+      const res = await fetchWithAuth(`${API_URL}/folders/${folderId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.detail || "Failed to delete folder");
+      }
+      setFolders((prev) => prev.filter((x) => x.id !== folderId));
+      if (editingFolderId === folderId) setEditingFolderId(null);
+      if (selectedFolderId === folderId) setSelectedFolderId("all");
+      loadMeetings();
+    } catch {
+      // ignore
+    }
+  }
+
   const folderById = Object.fromEntries(folders.map((f) => [f.id, f]));
 
   const filteredMeetings = filterMeetings(meetings, searchQuery);
@@ -279,6 +335,54 @@ function MeetingsPageContent() {
           </select>
         </div>
 
+        {/* Semantic search (RAG) */}
+        <div className="mb-6 bg-pastel-card border border-pastel-border rounded-xl p-5 shadow-sm">
+          <h2 className="text-base font-semibold text-pastel-text mb-2">Find meetings where we discussed…</h2>
+          <p className="text-sm text-pastel-text-muted mb-3">
+            Search by meaning, not just keywords. New and updated meetings are indexed automatically.
+          </p>
+          <div className="flex flex-wrap items-center gap-3 mb-2">
+            <form onSubmit={runSemanticSearch} className="flex flex-wrap items-center gap-3 flex-1">
+            <input
+              type="text"
+              placeholder="e.g. payment integration, launch timeline"
+              value={semanticQuery}
+              onChange={(e) => setSemanticQuery(e.target.value)}
+              className="flex-1 min-w-[200px] h-11 border border-pastel-border px-3 rounded-lg focus:border-pastel-accent focus:ring-2 focus:ring-pastel-accent/20 focus:outline-none bg-pastel-cream text-pastel-text placeholder:text-pastel-text-muted"
+              aria-label="Semantic search query"
+            />
+            <button
+              type="submit"
+              disabled={semanticLoading || !semanticQuery.trim()}
+              className="h-11 px-4 rounded-lg bg-pastel-accent text-white text-sm font-medium hover:bg-pastel-accent-hover disabled:opacity-50"
+            >
+              {semanticLoading ? "Searching…" : "Search"}
+            </button>
+            {semanticResults.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSemanticResults([]);
+                  setSemanticQuery("");
+                }}
+                className="text-sm text-pastel-text-muted hover:text-pastel-accent"
+              >
+                Clear
+              </button>
+            )}
+          </form>
+            <button
+              type="button"
+              onClick={backfillEmbeddings}
+              disabled={backfillLoading}
+              className="text-sm text-pastel-text-muted hover:text-pastel-accent disabled:opacity-50"
+              title="Index all meetings for semantic search"
+            >
+              {backfillLoading ? "Indexing…" : "Index all meetings"}
+            </button>
+          </div>
+        </div>
+
         {/* Folders - organize with custom folders */}
         <div className="mb-6 bg-pastel-card border border-pastel-border rounded-xl p-5 shadow-sm">
           <h2 className="text-base font-semibold text-pastel-text mb-3">Organize with folders</h2>
@@ -319,6 +423,14 @@ function MeetingsPageContent() {
                   </button>
                   <button type="button" onClick={cancelEditFolder} className="text-sm text-pastel-text-muted hover:underline">
                     Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => editingFolderId != null && deleteFolder(editingFolderId)}
+                    className="text-sm text-red-600 dark:text-red-400 hover:underline"
+                    title="Delete folder"
+                  >
+                    Delete
                   </button>
                 </form>
               ) : (
@@ -515,7 +627,77 @@ function MeetingsPageContent() {
 
         {/* List */}
         <div className="space-y-4 mt-6">
-          {sortedMeetings.map((m) => (
+          {semanticResults.length > 0 ? (
+            <>
+              <p className="text-sm text-pastel-text-muted mb-2">
+                {semanticResults.length} meeting{semanticResults.length !== 1 ? "s" : ""} match your search.
+              </p>
+              {semanticResults.map(({ meeting: m, score }) => (
+                <div
+                  key={m.id}
+                  role="link"
+                  tabIndex={0}
+                  onClick={() => router.push(`/meetings/${m.id}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      router.push(`/meetings/${m.id}`);
+                    }
+                  }}
+                  className="cursor-pointer bg-pastel-card border border-pastel-border rounded-xl p-5 shadow-sm hover:shadow-md hover:border-pastel-accent/30 transition-all duration-200"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="text-xl font-semibold text-pastel-text">{m.title}</h2>
+                        <span className="text-xs text-pastel-text-muted bg-pastel-cream px-2 py-0.5 rounded">
+                          {Math.round(score * 100)}% match
+                        </span>
+                        {m.folder_id && folderById[m.folder_id] && (
+                          <span
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium"
+                            style={{
+                              backgroundColor: `${folderById[m.folder_id].color}25`,
+                              color: folderById[m.folder_id].color,
+                            }}
+                          >
+                            <span
+                              className="w-1.5 h-1.5 rounded-full"
+                              style={{ backgroundColor: folderById[m.folder_id].color }}
+                            />
+                            {folderById[m.folder_id].name}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-pastel-text-muted mt-1 line-clamp-2">
+                        {m.summary || m.transcript?.slice(0, 160) || "No summary"}
+                      </p>
+                      {m.action_items && m.action_items.length > 0 && (
+                        <ul className="mt-2 text-xs text-pastel-text-muted space-y-0.5">
+                          {m.action_items.slice(0, 3).map((a) => (
+                            <li key={a.id}>• {a.task}</li>
+                          ))}
+                          {m.action_items.length > 3 && <li>+ {m.action_items.length - 3} more</li>}
+                        </ul>
+                      )}
+                    </div>
+                    <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                      <DeleteFromListButton
+                        id={m.id}
+                        title={m.title}
+                        onDeleted={(id) => {
+                          removeFromUI(id);
+                          setSemanticResults((prev) => prev.filter((r) => r.meeting.id !== id));
+                        }}
+                        fetchWithAuth={fetchWithAuth}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </>
+          ) : (
+            sortedMeetings.map((m) => (
             <div
               key={m.id}
               role="link"
@@ -610,10 +792,11 @@ function MeetingsPageContent() {
                 )}
               </div>
             </div>
-          ))}
+          ))
+          )}
         </div>
 
-        {!loading && !error && searchQuery && filteredMeetings.length === 0 && (
+        {!loading && !error && searchQuery && filteredMeetings.length === 0 && semanticResults.length === 0 && (
           <div className="bg-pastel-card border border-pastel-border rounded-xl p-8 shadow-sm text-center">
             <p className="text-pastel-text-muted">No meetings match &quot;{searchQuery}&quot;</p>
             <button

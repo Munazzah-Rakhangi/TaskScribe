@@ -58,6 +58,14 @@ class Meeting(Base):
 
 
 
+class MeetingEmbedding(Base):
+    """One embedding vector per meeting for semantic search (RAG)."""
+    __tablename__ = "meeting_embeddings"
+
+    meeting_id = Column(Integer, ForeignKey("meetings.id", ondelete="CASCADE"), primary_key=True)
+    embedding_json = Column(Text, nullable=False)  # JSON array of floats from OpenAI
+
+
 class ActionItem(Base):
     __tablename__ = "action_items"
 

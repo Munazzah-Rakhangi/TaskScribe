@@ -65,6 +65,16 @@ class FolderOut(BaseModel):
         from_attributes = True
 
 
+class SemanticSearchRequest(BaseModel):
+    query: str
+    top_k: int = 20
+
+
+class SemanticSearchResult(BaseModel):
+    meeting: "MeetingOut"
+    score: float
+
+
 class ExtractActionItemsRequest(BaseModel):
     transcript: str
 
