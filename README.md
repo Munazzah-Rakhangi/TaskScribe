@@ -49,10 +49,10 @@ How TaskScribe fits into your daily life:
 TaskScribe uses **agentic AI** to automate meeting workflows:
 
 - **Automated extraction pipeline** — Raw transcript → structured JSON (summary + action items) via OpenAI. The model follows strict output schemas and extracts tasks, owners, and deadlines when mentioned.
-- **Semantic search (RAG)** — Each meeting is embedded with OpenAI `text-embedding-3-small`; search by meaning (e.g. "payment integration", "launch timeline") returns the most relevant meetings with a relevance score.
+- **Semantic search (RAG)** — **Included.** Each meeting is embedded with OpenAI `text-embedding-3-small`; "Find meetings where we discussed…" lets you search by meaning (e.g. "payment integration", "launch timeline") and returns the most relevant meetings with a relevance score.
 - **Deadline reminder agent** — A background agent runs every 24 hours: parses action-item deadlines, identifies items due within 2 days, and sends email reminders to meeting owners. Runs independently without user action.
 - **Voice transcription** — Upload audio or record live; faster-whisper (open-source) transcribes to text. No per-use cost.
-- **Extensible for RAG / advanced agents** — The architecture supports adding semantic search (RAG), meeting Q&A, or a multi-tool meeting assistant agent in the future.
+- **Extensible for advanced agents** — The architecture supports adding meeting Q&A or a multi-tool meeting assistant agent in the future.
 
 ## Project Structure
 
